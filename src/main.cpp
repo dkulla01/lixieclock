@@ -18,18 +18,21 @@ Button2 minusButton;
 Lixie_II lix(LIXIE_DATA_PIN, NUM_LIXIES);
 
 bool hasPrintedTime = false;
-char lixieBuffer[4] = {'0', '0', '0', '0'};
 bool hasPrintedLixieTime = false;
 
 void printCurrentTime() {
   DateTime now = rtc.now();
-  Serial.printf("Time is %02d:%02d\n", now.hour(), now.minute());
+  Serial.printf("Time is %02d:%02d:%02d\n", now.hour(), now.minute(),
+                now.second());
 }
 
 void handlePlusButtonClick(Button2 &plusButton) {
   if (plusButton.wasPressedFor() < plusButton.getLongClickTime()) {
-    DateTime currentSetTime = rtc.now();
-    rtc.adjust(currentSetTime + ONE_MINUTE);
+    DateTime oneMinuteForwards = rtc.now() + ONE_MINUTE;
+    // floor the seconds to zero by explicitly setting the seconds
+    rtc.adjust(DateTime(oneMinuteForwards.year(), oneMinuteForwards.month(),
+                        oneMinuteForwards.day(), oneMinuteForwards.hour(),
+                        oneMinuteForwards.minute(), 0));
     printCurrentTime();
   }
 }
@@ -60,8 +63,11 @@ void handlePlusButtonLongClickDetected(Button2 &plusButton) {
 
 void handleMinusButtonClick(Button2 &minusButton) {
   if (minusButton.wasPressedFor() < minusButton.getLongClickTime()) {
-    DateTime currentSetTime = rtc.now();
-    rtc.adjust(currentSetTime - ONE_MINUTE);
+    DateTime oneMinuteBackwards = rtc.now() - ONE_MINUTE;
+    // floor the seconds to zero by explicitly setting the seconds
+    rtc.adjust(DateTime(oneMinuteBackwards.year(), oneMinuteBackwards.month(),
+                        oneMinuteBackwards.day(), oneMinuteBackwards.hour(),
+                        oneMinuteBackwards.minute(), 0));
 
     printCurrentTime();
   }
@@ -127,8 +133,7 @@ void loop() {
   if (espmillis % 50 == 0) {
     if (!hasPrintedLixieTime) {
       DateTime rtcTime = rtc.now();
-      sprintf(lixieBuffer, "%02d%02d", rtcTime.hour(), rtcTime.minute());
-      lix.write(lixieBuffer);
+      lix.write(rtcTime.hour() * 100 + rtcTime.minute());
       hasPrintedLixieTime = true;
     }
   } else {
