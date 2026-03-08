@@ -110,7 +110,9 @@ void setup() {
   lix.nixie();
   lix.write("0000");
   rtc.begin();
-  rtc.adjust(CLOCK_EPOCH);
+  if (rtc.lostPower()) {
+    rtc.adjust(CLOCK_EPOCH);
+  }
 
   // put your setup code here, to run once:
   pinMode(LED_BUILTIN, OUTPUT);
