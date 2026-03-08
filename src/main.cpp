@@ -1,19 +1,25 @@
 #include <Arduino.h>
 #include <Button2.h>
+#include <Lixie_II.h>
 #include <RTClib.h>
 
 #define PLUS_BTN_PIN D6
 #define MINUS_BTN_PIN D5
-#define SCL_PIN D1
-#define SDA_PIN D2
 #define LONGCLICK_MS 250
 const TimeSpan ONE_MINUTE = TimeSpan(60);
 const TimeSpan FIFTEEN_MINUTES = TimeSpan(60 * 15);
-const DateTime CLOCK_EPOCH = DateTime(SECONDS_FROM_1970_TO_2000);
+const DateTime CLOCK_EPOCH = DateTime(2010, 01, 01, 0, 0);
 RTC_DS3231 rtc;
 Button2 plusButton;
 Button2 minusButton;
+
+#define LIXIE_DATA_PIN 13
+#define NUM_LIXIES 4
+Lixie_II lix(LIXIE_DATA_PIN, NUM_LIXIES);
+
 bool hasPrintedTime = false;
+char lixieBuffer[4] = {'0', '0', '0', '0'};
+bool hasPrintedLixieTime = false;
 
 void printCurrentTime() {
   DateTime now = rtc.now();
@@ -99,6 +105,10 @@ void setup() {
   minusButton.setLongClickDetectedRetriggerable(true);
   minusButton.setLongClickTime(LONGCLICK_MS);
 
+  lix.begin(); // Initialize LEDs
+  lix.white_balance(Tungsten100W);
+  lix.nixie();
+  lix.write("0000");
   rtc.begin();
   rtc.adjust(CLOCK_EPOCH);
 
@@ -108,10 +118,21 @@ void setup() {
 }
 
 void loop() {
+  long espmillis = millis();
   plusButton.loop();
   minusButton.loop();
   digitalWrite(LED_BUILTIN, LOW);
-  if (millis() % 5000 == 0) {
+  if (espmillis % 50 == 0) {
+    if (!hasPrintedLixieTime) {
+      DateTime rtcTime = rtc.now();
+      sprintf(lixieBuffer, "%02d%02d", rtcTime.hour(), rtcTime.minute());
+      lix.write(lixieBuffer);
+      hasPrintedLixieTime = true;
+    }
+  } else {
+    hasPrintedLixieTime = false;
+  }
+  if (espmillis % 5000 == 0) {
     if (!hasPrintedTime) {
 
       printCurrentTime();
